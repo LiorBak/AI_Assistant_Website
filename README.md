@@ -308,7 +308,7 @@ Throughout the steps, please note that you choose your console's region (you can
         - Click on Hosting, environment variables, and add:
           `REACT_APP_API_BASE = UR_INVOKE_URL` >Amplify will build and give you a website URL.
 
-## Download your submissions
+## Step 3.3: Download your submissions
 
 1. To download your submissions, you can access your S3 bucket and download each file.txt alone.
 2. To bulk download your submissions, follow the next few steps:
