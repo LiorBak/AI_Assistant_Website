@@ -2,7 +2,7 @@
 
 The current repository includes a step-by-step tutorial to use a web application platform as experimental designs. Note that, although accessing the code is completely free to use, the code requires AI API keys and deployment on AWS, which may incur usage costs. For pricing, see the relevant sections and the official API website and AWS for more details.
 
-The README file offers a step-by-step instructions that can be divided into four main parts:
+The README file offers a step-by-step instructions that can be divided into four main steps:
 
 1. Installation and Local Setup
    1. Installing Required Applications
@@ -13,9 +13,9 @@ The README file offers a step-by-step instructions that can be divided into four
    2. Deployment to AWS so your experiment is ready to run.
 4. Optional Data Cleaning.
 
-# <font color = 'A8057A'>_Installation and Local Setup_</font>
+# <font color = 'A8057A'>_Step 1: Installation and Local Setup_</font>
 
-# <font color = 'A057A'>_Installation Required Applications_</font>
+# <font color = 'A057A'>_Step 1.1: Installation Required Applications_</font>
 
 # Download GitHub
 
@@ -94,7 +94,7 @@ node -v
 npm -v
 ```
 
-# <font color = 'A057A'>_Local Setup and Environment Variables_</font>
+# <font color = 'A057A'>_Step 1.2: Local Setup and Environment Variables_</font>
 
 # Backend Folder (API and Environment Variables)
 
@@ -153,7 +153,7 @@ Create `backend/.env` file (name the file `.env` and put it in the `backend` fol
 
   > You can find more information about each AI's models on their official API website, and choose the model that best fits your needs.
 
-# <font color = 'A8057A'>_Preparing your Conditions_</font>
+# <font color = 'A8057A'>_Step 2: Preparing your Conditions_</font>
 
 # Code Overview:
 
@@ -214,9 +214,9 @@ To preview and debug style changes, open **Chrome DevTools**:
 
 Then click the **Elements** tab, select an element on the page, and you’ll see the CSS rules (including from `App.css`) on the right side.
 
-# <font color = 'A8057A'>_Local Testing and Deployment_</font>
+# <font color = 'A8057A'>_Step 3: Local Testing and Deployment_</font>
 
-# <font color = 'A057A'>_Local testing to make sure your conditions look as you expect them to look_</font>
+# <font color = 'A057A'>_Step 3.1: Local testing to make sure your conditions look as you expect them to look_</font>
 
 ## Test your code locally
 
@@ -247,7 +247,7 @@ To stop the local code from running, press `Ctrl+C`.
 > `npm install` is needed the first time you set up the project (or any time `package.json` changes).  
 > After that, you can usually run only `cd XXX` depending on the terminal, and `npm start`.
 
-# <font color = 'A057A'>_Deployment to AWS so your experiment is ready to run._</font>
+# <font color = 'A057A'>_Step 3.2: Deployment to AWS so your experiment is ready to run._</font>
 
 ## Upload your code (ready-to-run): Amazon Web Services (AWS)
 
@@ -327,7 +327,7 @@ Throughout the steps, please note that you choose your console's region (you can
    aws s3 sync s3://YOUR_BUCKET_NAME "PATH/TO/Local/Folder"
    ```
 
-# <font color = 'A8057A'>_Optional Data Cleaning._</font>
+# <font color = 'A8057A'>_Step 4: Optional Data Cleaning._</font>
 
 # Optional code uses:
 
