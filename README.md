@@ -8,9 +8,9 @@ The README file offers a step-by-step instructions that are divided into four ma
    1. [Installing Required Applications](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-11-installation-required-applications)
    2. [Local Setup and Environment Variables](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-12-local-setup-and-environment-variables)
 2. [Preparing your experimental conditions](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-2-preparing-your-experimental-conditions)
-   1. Choose your experimental conditions according to your research goals
-   2. Details regarding each experimental condition
-   3. Editing your experimental conditions
+   1. [Choose your experimental conditions according to your research goals](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-21-choose-your-experimental-conditions-according-to-your-research-goals)
+   2. [Details regarding each experimental condition](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-22-details-regarding-each-experimental-condition-)
+   3. [Editing your experimental conditions](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-23-editing-your-experimental-conditions)
 3. [Local Testing and Deployment](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-3-local-testing-and-deployment)
    1. [Local testing to make sure your conditions look as you expect them to look](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-31-local-testing-to-make-sure-your-conditions-look-as-you-expect-them-to-look)
    2. [Deployment to AWS so your experiment is ready to run](https://github.com/atilmansour/AI_Assistant_Website?tab=readme-ov-file#step-32-deployment-to-aws-so-your-experiment-is-ready-to-run)
@@ -157,7 +157,7 @@ Create `backend/.env` file (name the file `.env` and put it in the `backend` fol
 
   > You can find more information about each AI's models on their official API website, and choose the model that best fits your needs.
 
-# <code>_Step 2: Preparing your Conditions_</code>
+# <code>_Step 2: Preparing your Experimental Conditions_</code>
 
 # <code>_Step 2.1: Choose your experimental conditions according to your research goals_</code>
 
@@ -251,8 +251,6 @@ Then click the **Elements** tab, select an element on the page, and you’ll see
 # <code>_Step 3: Local Testing and Deployment_</code>
 
 # <code>_Step 3.1: Local testing to make sure your conditions look as you expect them to look_</code>
-
-## Test your code locally
 
 - It is now time to test the platform locally and make sure it appears as expected. Even after running the code locally (as described below), you can continue making changes, save them, and the local version will update automatically, allowing you to view your changes in real time..
 
