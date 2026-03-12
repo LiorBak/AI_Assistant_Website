@@ -119,13 +119,6 @@ This project includes a `backend/` folder that runs a small server (proxy) for:
 - Some providers also block browser requests due to CORS.
 - The backend keeps secrets server-side and returns only the needed data to the frontend.
 
-### What is inside `backend/`?
-
-- **server.js**: The backend server. It exposes an endpoint like:
-  - `POST /api/ai` (the frontend sends `{ provider, chatHistory }` and receives `{text}`).
-- **package.json**: Backend dependencies (express, axios, cors, dotenv, etc.).
-- **.env**: Backend secrets (API keys + AWS keys). _This file must NOT be uploaded to GitHub_.
-
 ### Backend environment variables
 
 Create `backend/.env` file (name the file `.env` and put it in the `backend` folder) and add your secrets there.
@@ -145,19 +138,19 @@ Create `backend/.env` file (name the file `.env` and put it in the `backend` fol
   For example, if you only want to use ChatGPT as your LLM, you can write `GEMINI_KEY=''` and `CLAUDE_KEY=''`:
   1. To generate ChatGPT key: `OPENAI_KEY=Bearer XXXX`
 
-     To get a GPT key, go to [OpenAI API's official website](https://openai.com/api/). You will need to create an account, and get a personal key. It is important to keep this key private, as this is what allows you to connect to ChatGPT.
+     Go to [OpenAI API's official website](https://openai.com/api/). You will need to create an account, and get a personal key. It is important to keep this key private, as this is what allows you to connect to ChatGPT.
 
   2. To generate Claude key: `CLAUDE_KEY=sk-ant-api03-...`
 
-     To generate a claude key, go to [Claude API's official website](https://claude.com/platform/api). You will need to create an account, and get a personal key. It is important to keep this key private, as this is what allows you to connect to Claude.
+     Go to [Claude API's official website](https://claude.com/platform/api). You will need to create an account, and get a personal key. It is important to keep this key private, as this is what allows you to connect to Claude.
 
   3. To generate Gemini key: `GEMINI_KEY=AIzaSy...`
-     To generate a gemini key, go to [Gemini API's official website](https://ai.google.dev/gemini-api/docs/api-key). You will need to create an account, and get a personal key. It is important to keep this key private, as this is what allows you to connect to Gemini.
+     Go to [Gemini API's official website](https://ai.google.dev/gemini-api/docs/api-key). You will need to create an account, and get a personal key. It is important to keep this key private, as this is what allows you to connect to Gemini.
 
-- For the other environment keys, please go to the [Amazon Web Services (AWS) section](<#Amazon_Web_Services_(AWS)>) (or keep following this tutorial, we'll get there).
+- For the other environment keys, you can keep them empty for now, we will get back to them when we deploy the platform to AWS in [Amazon Web Services (AWS) section](<#Amazon_Web_Services_(AWS)>).
 - **Make sure `backend/.env` is in `.gitignore`** (in your local code) before you push your code again to github. To do that, you need to have a line that says `backend/.env` inside your .gitignore file.
 
-- **_backend/server.js_**: Calls ChatGPT/Claude/Gemini securely (API keys stay server-side). You can change model names and max tokens here.
+- **_backend/server.js_**: Calls ChatGPT/Claude/Gemini securely (API keys stay private). Here, you can change model names and max tokens here.
 
   > You may change the components of each AI's API: The default is max_tokens = 1000, and the following models: gpt-4o (ChatGPT), 2.5-flash (Gemini), 4 sonnet (Claude). You may adjust these to your liking.
 
@@ -167,9 +160,9 @@ Create `backend/.env` file (name the file `.env` and put it in the `backend` fol
 
 # <code>_Step 2.1: Choose your experimental conditions according to your research goals_</code>
 
-Now it's time for you to define your goal, and follow the instructions below to find the experimental conditions that suit your goals. The platform allows you to choose between five experimental conditions. Here, we provide the summary table which includes the example research goals and corresponding experimental conditions. For the full examples, please check out the full paper.
+Now it's time for you to define your goal, and follow the instructions below to find the experimental conditions that suit your goals. The platform allows you to choose between five experimental conditions. Here, we provide the summary table which includes the example research goals and corresponding experimental conditions. For the full examples, please check out our paper.
 
-| Research goals                                                                                                                                                                | Condition A Name                                                                                                                       | Condition B Name                                                                         |
+| Research goals (Your research is about ...)                                                                                                                                   | Condition A Name                                                                                                                       | Condition B Name                                                                         |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | The effect of having the option to use conversational AI vs. having no such option.                                                                                           | Always Visible AI                                                                                                                      | No AI                                                                                    |
 | The effect of having a constant presence of conversational AI vs. having the option to close and reopen it.                                                                   | Always Visible AI                                                                                                                      | Toggleable AI                                                                            |
