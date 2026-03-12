@@ -3,23 +3,23 @@ import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 //First, we are importing all the pages and conditions we have. Each page (other than the ThankYou.js), is a condition in your experiment
 //You may add or duplicate .js files into the pages folder to edit or add additional conditions
 import ThankYou from "./ThankYou";
-import ButtonPress from "./ButtonPress";
-import AIOpensAndCloses from "./AIOpensAndCloses";
-import OnlyEditor from "./OnlyEditor";
-import AIStillPage from "./AIStillPage";
+import ParticipantInitiated from "./ParticipantInitiated";
+import ToggleableAI from "./ToggleableAI";
+import NoAI from "./NoAI";
+import AlwaysVisibleAI from "./AlwaysVisibleAI";
 import OnlyAI from "./OnlyAI";
 
 const Routes = () => {
   return (
     <Router>
       <Switch>
-        <Route path="/b" component={ButtonPress} />{" "}
+        <Route path="/b" component={ParticipantInitiated} />{" "}
         {/*Here is the addition to your web address https//XXXX/b, you may change to your liking*/}
-        <Route path="/o" component={AIOpensAndCloses} />
+        <Route path="/o" component={ToggleableAI} />
         {/*Here is the addition to your web address https//XXXX/po, you may change to your liking*/}
-        <Route path="/u" component={AIStillPage} />
+        <Route path="/u" component={AlwaysVisibleAI} />
         {/*Here is the addition to your web address https//XXXX/u, you may change to your liking*/}
-        <Route path="/c" component={OnlyEditor} />
+        <Route path="/c" component={NoAI} />
         {/*Here is the addition to your web address https//XXXX/c, you may change to your liking*/}
         <Route path="/a" component={OnlyAI} />
         {/*Here is the addition to your web address https//XXXX/a, you may change to your liking*/}

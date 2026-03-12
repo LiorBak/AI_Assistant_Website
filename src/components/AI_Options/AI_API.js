@@ -87,7 +87,7 @@ const AI_API = ({
     // you can change it to give the AI instructions (for example: Please answer in 1-2 sentences only)"
     // ----------------------------
     const writingContext = lastEditedText
-      ? $`{backgroundAIMessage}. This is what I have written so far: ${toText(lastEditedText)}`
+      ? `${backgroundAIMessage}. This is what I have written so far: ${toText(lastEditedText)}`
       : `${backgroundAIMessage} My text is currently empty.`;
 
     // IMPORTANT: include the new message in the history we send (state updates are async)

@@ -1,6 +1,6 @@
 /**
  * Summary:
- * This page shows an AI assistant chat only (no writing editor),
+ * This page shows an Conversational AI chat only (no writing editor),
  * logs user activity, and sends the logs to your backend endpoint (/api/logs)
  * so the Lambda can save them to S3.
  *
@@ -195,7 +195,7 @@ const OnlyAI = () => {
       </p>
 
       <div id="title-container">
-        <div id="title-text">AI Assistant</div>
+        <div id="title-text">Conversational AI</div>
       </div>
 
       {/* Reuse your editor container so it’s the same size as the editor box */}

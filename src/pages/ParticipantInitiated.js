@@ -1,6 +1,6 @@
 /**
  * Summary:
- * This page shows a writing editor + an AI assistant. The AI starts CLOSED and opens only
+ * This page shows a writing editor + an Conversational AI. The AI starts CLOSED and opens only
  * when the participant clicks the AI button (from the editor toolbar). We log:
  * - editor activity
  * - chat messages
@@ -19,7 +19,7 @@ import Button from "../components/Button";
 import Modal from "../components/Modal";
 import "../App.css";
 
-const ButtonPress = () => {
+const ParticipantInitiated = () => {
   // CONFIG YOU WILL EDIT:
   // Choose provider: "chatgpt" | "claude" | "gemini"
   const aiProvider = "chatgpt";
@@ -229,7 +229,7 @@ const ButtonPress = () => {
       { length },
       () => characters[Math.floor(Math.random() * characters.length)],
     ).join("");
-    return `BP${middlePart}B`;
+    return `PI${middlePart}B`;
   }
 
   // Called when user confirms submit
@@ -319,7 +319,7 @@ const ButtonPress = () => {
             isChatOpen && !isChatCollapsed ? "show" : ""
           }`}
         >
-          AI Assistant
+          Conversational AI
         </div>
       </div>
 
@@ -355,7 +355,7 @@ const ButtonPress = () => {
 
           <div className="assistant-inner">
             <div className="chat-shell-header">
-              <div>AI Assistant</div>
+              <div>Conversational AI</div>
 
               <button
                 className="chat-close"
@@ -372,7 +372,7 @@ const ButtonPress = () => {
               // CONFIG YOU WILL EDIT:
               // Initial messages shown to participants in the chat
               initialMessages={[
-                "Hello, this is a present message that you can edit in your code in AIStillPage.js (theInitialMsg).",
+                "Hello, this is a present message that you can edit in your code in ParticipantInitiated.js (theInitialMsg).",
                 "This is the second message, you can edit, add more, or delete me.",
               ]}
               lastEditedText={currentLastEditedText}
@@ -409,4 +409,4 @@ const ButtonPress = () => {
   );
 };
 
-export default ButtonPress;
+export default ParticipantInitiated;

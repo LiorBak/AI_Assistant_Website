@@ -1,33 +1,46 @@
 /**
- * OnlyEditor.js
- * Condition: OnlyEditor — editor-only baseline (no AI assistant). Participants must write at least 80 words to submit,
- * On submit, we upload ONLY editor logs to S3.
+ * Summary:
+ * This page shows a writing editor + an Conversational AI panel, logs user activity,
+ * and sends the logs to your backend endpoint (/api/logs) so the Lambda can save them to S3.
  *
- * CONFIG YOU WILL EDIT:
- * - Word threshold (currently 80)
- * - Instructions text shown to participants
- * - API base URL: REACT_APP_API_BASE (frontend .env)
+ * sreach for: CONFIG YOU WILL EDIT to edit relevant changes
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import TextEditor from "../components/QuillTextEditor";
+import AI_API from "../components/AI_Options/AI_API";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
+import "../App.css";
 
-const OnlyEditor = () => {
-  // ----------------------------
-  // LOGGING STATE
-  // ----------------------------
-  const [editorLog, setEditorLog] = useState([]); // detailed logs from the editor
-  const [currentLastEditedText, setCurrentLastEditedText] = useState(""); // latest editor text (used to compute word count)
-  const startMsRef = useRef(performance.now());
+const AlwaysVisibleAI = () => {
+  // CONFIG YOU WILL EDIT:
+  // Choose provider: "chatgpt" | "claude" | "gemini"
+  const aiProvider = "chatgpt";
+
+  //CONFIG YOU WILL EDIT:
+  //Here, you can give the conversational AI background informaiton about the task,
+  // or instructions to reply in a certain way.
+  const backgroundAIMessage = "";
 
   // ----------------------------
-  // MODALS + SUBMISSION STATE
+  // LOGGING STATE (what we save)
   // ----------------------------
-  const [isModalOpen, setModalOpen] = useState(false); // final "confirm submit" modal
-  const [isEarlyModalOpen, setEarlyModalOpen] = useState(false); // "not enough words yet" modal
-  const [submit, setSubmit] = useState(false); // used to disable the submit button + passed into TextEditor
+  const [editorLog, setEditorLog] = useState([]); // logs from the text editor
+  const [currentLastEditedText, setCurrentLastEditedText] = useState(""); // latest editor text (used for word count + AI context)
+  const [messagesLog, setMessagesLog] = useState([]); // logs from chat messages
+
+  // ----------------------------
+  // MODALS + SUBMIT STATE
+  // ----------------------------
+  const [isModalOpen, setModalOpen] = useState(false); // "Are you sure?" modal
+  const [isEarlyModalOpen, setEarlyModalOpen] = useState(false); // "Too early to submit" modal
+  const [submit, setSubmit] = useState(false); // passed to editor to mark submit moment (if your editor uses it)
+
+  //pasteFlag decides if you enable or disable copying and pasting:
+  //CONFIG YOU WILL EDIT: when true, users can copy and paste to the text editor.
+  const pasteFlag = true;
+
   // canSubmit = time requirement AND word requirement
   const [canSubmit, setCanSubmit] = useState(false);
 
@@ -45,24 +58,35 @@ const OnlyEditor = () => {
   const [canSubmitWord, setCanSubmitWord] = useState(false); // word threshold met?
   const [canSubmitTime, setCanSubmitTime] = useState(false); // time threshold met?
 
+  // ----------------------------
+  // CHAT UI STATE
+  // ----------------------------
+  const [isChatOpen, setIsChatOpen] = useState(false);
+
   // CONFIG YOU WILL EDIT:
   // Message shown if participant tries to submit too early (word/time not met)
   const [messageEarlyModal, setMessageEarlyModal] = useState(
     "Insert here your message, encouraging participants to write for more time + words (participants tried to submit before time + word count threshold).",
   );
 
-  // CONFIG YOU WILL EDIT: pasteFlag is always false here (and TextEditor has its own paste prevention too).
-  // If you want to control paste behavior dynamically, convert this into a state variable.
-  const pasteFlag = false;
+  // Chat open/close/collapse events (ms since page start)
+  const startMsRef = useRef(performance.now());
 
-  // Keep `submit` aligned with the "confirm submit" modal state
-  // (When modal is open, the submit button becomes disabled)
+  // Prevent auto-open from firing multiple times
+  const hasAutoOpenedRef = useRef(false);
+
+  // Opens chat panel (full open)
+  const openChat = useCallback(() => {
+    setIsChatOpen(true);
+  }, []);
+
+  // Keep submit flag aligned with the submit modal
   useEffect(() => {
     setSubmit(isModalOpen);
   }, [isModalOpen]);
 
-  //CONFIG YOU WILL EDIT: disables copy/cut/paste, delete the following func to enable
-  // We recommend keeping in this condition, unless users are expected to copy and paste from external website.
+  // Optional: disable copy/cut/paste completely
+  //CONFIG YOU WILL EDIT: Adjust to your liking (delete this function if you want to enable).
   useEffect(() => {
     const handleCopy = (event) => event.preventDefault();
     const handleCut = (event) => event.preventDefault();
@@ -112,6 +136,20 @@ const OnlyEditor = () => {
     setCanSubmitWord(wc >= 50);
   }, [currentLastEditedText]);
 
+  // ----------------------------
+  // Auto open chat after 100 ms, so users experience it as opening immediately.
+  // ----------------------------
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (!hasAutoOpenedRef.current) {
+        hasAutoOpenedRef.current = true;
+        openChat();
+      }
+    }, 100);
+
+    return () => clearTimeout(t);
+  }, [openChat]);
+
   // Combined eligibility + build the early-modal message
   useEffect(() => {
     setCanSubmit(canSubmitWord && canSubmitTime);
@@ -151,36 +189,42 @@ const OnlyEditor = () => {
   const handleCloseModal = () => setModalOpen(false);
   const handleCloseEarlyModal = () => setEarlyModalOpen(false);
 
-  // Generates an ID that becomes the submission code + S3 filename
+  // Generate a random ID for each submission (.txt file name)
   // CONFIG YOU WILL EDIT:
-  // Change prefix "OE" or suffix "C" if you want to tag a condition/cohort
+  // You can change prefix/suffix to identify study condition, cohort, etc.
   function getRandomString(length) {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const middlePart = Array.from(
       { length },
       () => characters[Math.floor(Math.random() * characters.length)],
     ).join("");
-    return `OE${middlePart}C`;
+    return `AVA${middlePart}U`;
   }
 
   // Called when user confirms submit
   const handleConfirmSubmit = async () => {
     setModalOpen(false);
 
-    // Only editor logs are saved in this condition
+    // Build logs object that will be uploaded to S3 by your backend
     const logs = {
       id: getRandomString(5),
+      aiProvider: aiProvider,
       NumOfSubmitClicks: submitAttempts,
       TimeStampOfSubmitClicks: submitAttemptTimesMs,
+      messages: messagesLog,
       editor: editorLog,
     };
-
     saveLogsToS3(logs);
   };
 
-  // Receives the full editor logs array from TextEditor
+  // Called by TextEditor component to provide the full editor log array
   const handleEditorLog = useCallback((allLogs) => {
     setEditorLog(allLogs);
+  }, []);
+
+  // Called by AI_API component to provide the full messages log array
+  const handleMessages = useCallback((allMessages) => {
+    setMessagesLog(allMessages);
   }, []);
 
   // ----------------------------
@@ -201,15 +245,18 @@ const OnlyEditor = () => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Save failed");
 
-    //CONFIG YOU WILL EDIT
-    // Message shown after successful upload
+    // CONFIG YOU WILL EDIT:
+    // This is the message shown to participants after upload succeeds.
     alert("Please copy this code to XXX: " + logs.id);
   };
+
+  // CSS helper class for chat open/closed styling
+  const assistantSlotClass = `${isChatOpen ? "open" : ""}`.trim();
 
   return (
     <div>
       {/* CONFIG YOU WILL EDIT:
-          Put your participant instructions here.
+          Put your study instructions here (can include <strong>bold</strong> text).
       */}
       <p id="instructions" style={{ display: "block" }}>
         Instructions: You can write here your instructions.{" "}
@@ -217,7 +264,16 @@ const OnlyEditor = () => {
         important parts can be in regular fond. Adjust to your liking.
       </p>
 
-      <div id="title-text-control">Text Editor</div>
+      <div id="title-container">
+        <div id="title-text">Text Editor</div>
+
+        <div
+          id="title-assistant"
+          className={`title-fade-in ${isChatOpen ? "show" : ""}`}
+        >
+          Conversational AI
+        </div>
+      </div>
 
       <div id="content-container">
         <div id="editor-area">
@@ -227,15 +283,40 @@ const OnlyEditor = () => {
               onEditorSubmit={handleEditorLog}
               pasteFlag={pasteFlag}
               onLastEditedTextChange={setCurrentLastEditedText}
-              showAI={false} // Condition-specific: AI is disabled
+              showAI={false}
+            />
+          </div>
+        </div>
+
+        {/* RIGHT: Chat slot */}
+        <div id="assistant-slot" className={assistantSlotClass}>
+          {isChatOpen}
+
+          <div className="assistant-inner">
+            <div className="chat-shell-header">
+              <div>Conversational AI</div>
+            </div>
+
+            <AI_API
+              onMessagesSubmit={handleMessages}
+              // CONFIG YOU WILL EDIT:
+              // Initial messages shown in the chat.
+              initialMessages={[
+                "Hello, this is a present message that you can edit in your code in AlwaysVisibleAI.js (theInitialMsg).",
+                "This is the second message, you can edit, add more, or delete me.",
+              ]}
+              lastEditedText={currentLastEditedText}
+              aiProvider={aiProvider}
+              backgroundAIMessage={backgroundAIMessage}
             />
           </div>
         </div>
       </div>
 
-      <div id="submit-button-exp">
-        {/* Submit is disabled while the confirm modal is open */}
-        <Button title="Submit" onClick={handleOpenModal} disabled={submit} />
+      <div id="submit-and-open">
+        <div id="submit-button-exp">
+          <Button title="Submit" onClick={handleOpenModal} />
+        </div>
       </div>
 
       {/* Final submit confirmation modal */}
@@ -247,7 +328,7 @@ const OnlyEditor = () => {
         showConfirm={true}
       />
 
-      {/* Early submit modal: user has not met the word requirement */}
+      {/* Early-submit modal (word/time requirement not met) */}
       <Modal
         isOpen={isEarlyModalOpen}
         onClose={handleCloseEarlyModal}
@@ -258,4 +339,4 @@ const OnlyEditor = () => {
   );
 };
 
-export default OnlyEditor;
+export default AlwaysVisibleAI;

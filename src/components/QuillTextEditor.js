@@ -5,7 +5,7 @@ import "../App.css";
 
 /**
  * CustomToolbar
- * Defines the Quill toolbar UI, including an optional "AI Assistant" button (used for the ButtonPress condition only).
+ * Defines the Quill toolbar UI, including an optional "Conversational AI" button (used for the ButtonPress condition only).
  */
 const CustomToolbar = ({ showAI, onOpenChat }) => (
   <div id="toolbar" className="ql-toolbar ql-snow">
@@ -32,7 +32,7 @@ const CustomToolbar = ({ showAI, onOpenChat }) => (
       <button type="button" className="ql-list" value="bullet" />
       <button type="button" className="ql-clean" />
 
-      {/* Show AI Assistant button only when showAI=true */}
+      {/* Show conversational AI button only when showAI=true */}
       {showAI && (
         <button
           type="button"
@@ -41,7 +41,7 @@ const CustomToolbar = ({ showAI, onOpenChat }) => (
           onMouseDown={(e) => e.preventDefault()}
           onClick={onOpenChat}
         >
-          AI Assistant
+          Conversational AI
         </button>
       )}
     </span>

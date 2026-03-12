@@ -1,6 +1,6 @@
 /**
  *Summary:
- * the AI assistant opens automatically after 20 seconds (even if the participant never clicks it),
+ * the Conversational AI opens automatically after 20 seconds (even if the participant never clicks it),
  * so we can measure the effect of proactively offering AI help. We log chat auto-open + open/close/collapse events and upload to S3.
  *
  * sreach for: CONFIG YOU WILL EDIT to edit relevant changes
@@ -13,7 +13,7 @@ import Button from "../components/Button";
 import Modal from "../components/Modal";
 import "../App.css";
 
-const AIOpensAndCloses = () => {
+const ToggleableAI = () => {
   // CONFIG YOU WILL EDIT:
   // Choose provider: "chatgpt" | "claude" | "gemini"
   const aiProvider = "chatgpt";
@@ -224,7 +224,7 @@ const AIOpensAndCloses = () => {
       { length },
       () => characters[Math.floor(Math.random() * characters.length)],
     ).join("");
-    return `AOAC${middlePart}O`;
+    return `TA${middlePart}O`;
   }
 
   // Called when user confirms submit
@@ -295,7 +295,7 @@ const AIOpensAndCloses = () => {
             isChatOpen && !isChatCollapsed ? "show" : ""
           }`}
         >
-          AI Assistant
+          Conversational AI
         </div>
       </div>
 
@@ -329,7 +329,7 @@ const AIOpensAndCloses = () => {
 
           <div className="assistant-inner">
             <div className="chat-shell-header">
-              <div>AI Assistant</div>
+              <div>Conversational AI</div>
 
               <button
                 className="chat-close"
@@ -345,7 +345,7 @@ const AIOpensAndCloses = () => {
               onMessagesSubmit={handleMessages}
               // CONFIG YOU WILL EDIT: present chat messages
               initialMessages={[
-                "Hello, this is a present message that you can edit in your code in AIStillPage.js (theInitialMsg).",
+                "Hello, this is a present message that you can edit in your code in ToggleableAI.js (theInitialMsg).",
                 "This is the second message, you can edit, add more, or delete me.",
               ]}
               lastEditedText={currentLastEditedText}
@@ -382,4 +382,4 @@ const AIOpensAndCloses = () => {
   );
 };
 
-export default AIOpensAndCloses;
+export default ToggleableAI;
