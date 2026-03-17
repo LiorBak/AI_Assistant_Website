@@ -21,7 +21,7 @@ const AI_API = ({
     (initialMessages || []).map((text) => ({
       timestamp: Math.round(performance.now()),
       text: String(text ?? ""),
-      sender: "chatbot",
+      sender: "conversational AI",
     })),
   );
 
@@ -36,7 +36,7 @@ const AI_API = ({
       (initialMessages || []).map((text) => ({
         timestamp: Math.round(performance.now()),
         text: String(text ?? ""),
-        sender: "chatbot",
+        sender: "conversational AI",
       })),
     );
   }, []);
@@ -175,7 +175,7 @@ const AI_API = ({
         chatbotResponseText = toText(response.data?.text).trim();
       }
 
-      // Add chatbot reply to the UI
+      // Add conversational AI reply to the UI
       setMessages((prev) => [
         ...prev,
         {
