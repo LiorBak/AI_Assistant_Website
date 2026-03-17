@@ -21,7 +21,7 @@ const AI_API = ({
     (initialMessages || []).map((text) => ({
       timestamp: Math.round(performance.now()),
       text: String(text ?? ""),
-      sender: "conversational AI",
+      sender: "conversationalAI",
     })),
   );
 
@@ -36,7 +36,7 @@ const AI_API = ({
       (initialMessages || []).map((text) => ({
         timestamp: Math.round(performance.now()),
         text: String(text ?? ""),
-        sender: "conversational AI",
+        sender: "conversationalAI",
       })),
     );
   }, []);
@@ -103,7 +103,7 @@ const AI_API = ({
     ];
 
     try {
-      let chatbotResponseText = "";
+      let conversationalAIResponseText = "";
       /**
        * We do NOT call Anthropic directly from the browser (CORS + API key leak).
        * Instead, we call OUR backend proxy endpoint: /api/ai
@@ -127,7 +127,7 @@ const AI_API = ({
         });
 
         // Backend returns { text: "..." }
-        chatbotResponseText = toText(response.data?.text).trim();
+        conversationalAIResponseText = toText(response.data?.text).trim();
 
         // ---- Provider 2: Gemini (Google) ----
       } else if (aiProvider === "gemini") {
@@ -144,7 +144,7 @@ const AI_API = ({
         });
 
         // Backend returns { text: "..." }
-        chatbotResponseText = toText(response.data?.text).trim();
+        conversationalAIResponseText = toText(response.data?.text).trim();
 
         // ---- Provider 3: OpenAI (ChatGPT) ----
       } else {
@@ -172,7 +172,7 @@ const AI_API = ({
         });
 
         // Backend returns { text: "..." }
-        chatbotResponseText = toText(response.data?.text).trim();
+        conversationalAIResponseText = toText(response.data?.text).trim();
       }
 
       // Add conversational AI reply to the UI
@@ -180,8 +180,8 @@ const AI_API = ({
         ...prev,
         {
           timestamp,
-          text: toText(chatbotResponseText),
-          sender: "conversational AI",
+          text: toText(conversationalAIResponseText),
+          sender: "conversationalAI",
         },
       ]);
     } catch (error) {
@@ -196,7 +196,7 @@ const AI_API = ({
         {
           timestamp,
           text: "Sorry, an error occurred.",
-          sender: "conversational AI",
+          sender: "conversationalAI",
         },
       ]);
     }
