@@ -1,10 +1,10 @@
-# A Tutorial for Building and Deploying a Web Application Platform for Experiments with Conversational AI
+# A Tutorial for Building and Deploying a Web Application Platform for Experiments with LLM Assistants
 
 The tutorial introduces free open-source code, with detailed step-by-step instructions including the installation of the code, building experimental conditions, the deployment of the web application, and data cleaning suggestions. The open-source code is accompanied by detailed instructions and recommendations for adjustments to your needs and preferences.
 
-Throughout the code files, look for relevant change suggestions (e.g., conversational AI's present messages) by searching for `CONFIG YOU WILL EDIT` comments. These comments were written to allow optional user-friendly customization.
+Throughout the code files, look for relevant change suggestions (e.g., the LLM Assistant's present messages) by searching for `CONFIG YOU WILL EDIT` comments. These comments were written to allow optional user-friendly customization.
 
-Note that, although accessing the code is completely free to use, the code requires AI API keys and deployment on AWS, which may incur usage costs. For pricing, see the relevant sections and the official API website and AWS for more details.
+Note that, although accessing the code is completely free to use, the code requires LLM API keys and deployment on AWS, which may incur usage costs. For pricing, see the relevant sections and the official API website and AWS for more details.
 
 The README file offers a step-by-step instructions that are divided into four main steps:
 
@@ -109,13 +109,13 @@ npm -v
 
 # <code>_Step 1.2: Local Setup and Environment Variables_</code>
 
-Next, you need to set up the platform locally and securely store the sensitive information (e.g., API Keys that provide access to LLMs) required to use the conversational AI.
+Next, you need to set up the platform locally and securely store the sensitive information (e.g., API Keys that provide access to LLMs) required to use the LLM Assistant.
 
 # Backend Folder (API and Environment Variables)
 
 This project includes a `backend/` folder that runs a small server for:
 
-1. Calling AI providers (ChatGPT / Claude / Gemini) securely.
+1. Calling LLM providers (ChatGPT / Claude / Gemini) securely.
 2. Handling AWS actions (e.g., S3) securely.
 
 **Why do we need a backend?**
@@ -158,25 +158,25 @@ Create `backend/.env` file (name the file `.env` and put it in the `backend` fol
 
 - **_backend/server.js_**: This file calls ChatGPT/Claude/Gemini securely (API keys stay private). Here, you can change model names and max tokens here.
 
-  > You may change the components of each AI's API: The default is max_tokens = 1000, and the following models: gpt-4o (ChatGPT), 2.5-flash (Gemini), 4 sonnet (Claude). You may adjust these to your liking.
+  > You may change the components of each LLM's API: The default is max_tokens = 1000, and the following models: gpt-4o (ChatGPT), 2.5-flash (Gemini), 4 sonnet (Claude). You may adjust these to your liking.
 
-  > You can find more information about each AI's models on their official API website, and choose the model that best fits your needs.
+  > You can find more information about each LLM on their official API website, and choose the model that best fits your needs.
 
 # <code>_Step 2: Preparing your Experimental Conditions_</code>
 
-After downloading all the required applications, having your own copy of the code locally, and setting up the AI API keys, the second step is to prepare the experimental conditions you want to use in your experiments. Step 2 includes preparing and customizing the experimental conditions according to your purposes.
+After downloading all the required applications, having your own copy of the code locally, and setting up the LLM API keys, the second step is to prepare the experimental conditions you want to use in your experiments. Step 2 includes preparing and customizing the experimental conditions according to your purposes.
 
 # <code>_Step 2.1: Choosing your experimental conditions according to your research goals_</code>
 
 First, you need to define your goal, and follow the instructions below to find the experimental conditions most suitable for your goal. The platform allows you to choose between some or all of the five experimental conditions and to update them. Here, we provide a table which includes examples of experimental conditions that can be used to test different research questions.
 
-| Condition                | Research Purpose                                                                                                                                                                                                                                         |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| No AI                    | This condition includes only a text editor. It allows examining your dependent variable (DV) without having access to a conversational AI, and can serve as a control condition to all others.                                                           |
-| Always Visible AI        | This condition includes a text editor alongside a conversational AI window that remains visible throughout the task. It allows examining your DV when conversational AI is continuously available.                                                       |
-| Toggleable AI            | This condition includes a text editor alongside a conversational AI window that participants can close and reopen. It allows examining your DV when participants have control over the visibility of the conversational AI window.                       |
-| Participant-Initiated AI | This condition includes a text editor alongside a conversational AI window that opens only after participants press a button. It allows examining your DV when participants initiate the conversational AI window rather than being proactively offered. |
-| Chat Only                | This condition includes only the conversational AI window. It allows examining your DV when participants produce their writing only by interacting with the conversational AI, without an option to independently write in a text editor.                |
+| Condition                 | Research Purpose                                                                                                                                                                                                                                  |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No LLM                    | This condition includes only a text editor. It allows examining your dependent variable (DV) without having access to an LLM Assistant, and can serve as a control condition to all others.                                                       |
+| Always Visible LLM        | This condition includes a text editor alongside an LLM Assistant window that remains visible throughout the task. It allows examining your DV when LLM Assistance is continuously available.                                                      |
+| Toggleable LLM            | This condition includes a text editor alongside an LLM Assistant window that participants can close and reopen. It allows examining your DV when participants have control over the visibility of the LLM Assistant window.                       |
+| Participant-Initiated LLM | This condition includes a text editor alongside an LLM Assistant window that opens only after participants press a button. It allows examining your DV when participants initiate the LLM Assistant window rather than being proactively offered. |
+| Chat Only                 | This condition includes only the LLM Assistant window. It allows examining your DV when participants produce their writing only by interacting with the LLM Assistant, without an option to independently write in a text editor.                 |
 
 # <code>_Step 2.2: Details regarding each experimental condition_ </code>
 
@@ -186,39 +186,39 @@ After participants successfully submit their response, a pop-up message will ins
 
 The following presents the five experimental conditions the platform offers in more detail, and instructions on how to duplicate conditions. Note that all conditions are located in the `src/pages` folder:
 
-1. **No AI Condition**:
-   - This condition includes only a text editor. Participants do not have the option to use conversational AI. The condition can serve as a control condition for all other conditions, where participants have the option to use conversational AI.
+1. **No LLM Condition**:
+   - This condition includes only a text editor. Participants do not have the option to use an LLM Assistant. The condition can serve as a control condition for all other conditions, where participants have the option to use an LLM Assistant.
    - **_Route Suffix_**: Add `/c` to the base link of the platform, can be adjusted in `Routes.js` file, located in the pages folder.
-   - **_Default participant-code_**: A default prefix of "NA" and a suffix of C.
+   - **_Default participant-code_**: A default prefix of "NL" and a suffix of C.
 
-1. **Always Visible AI Condition**:
-   - This condition includes a text editor and a conversational AI interface. Participants constantly have the option to use conversational AI.
-   - **_Differences from other conditions_**: In this condition, the conversational AI automatically appears next to participants' text editor after a set number of seconds (the default is 100 milliseconds, so the conversational AI appears immediately upon page load). Participants cannot control (close and reopen) the conversational AI interface.
+1. **Always Visible LLM Condition**:
+   - This condition includes a text editor and an LLM Assistant interface. Participants constantly have the option to use an LLM Assistant.
+   - **_Differences from other conditions_**: In this condition, the LLM Assistant automatically appears next to participants' text editor after a set number of seconds (the default is 100 milliseconds, so the LLM Assistant appears immediately upon page load). Participants cannot control (close and reopen) the LLM Assistant interface.
    - **_Route Suffix_**: Add `/u` to the base link of the platform, can be adjusted in `Routes.js` file, located in the pages folder.
-   - **_Default participant-code_**: A default prefix of "AVA" and a suffix of U.
+   - **_Default participant-code_**: A default prefix of "AVL" and a suffix of U.
 
-1. **Toggleable AI Condition**:
-   - This condition includes a text editor and a toggleable conversational AI interface, meaning that participants can close and reopen the conversational AI.
-   - **_Differences from other conditions_**: Compared to the Always Visible AI condition, in which the AI is constantly visible, here, participants can close and reopen that conversational AI.
+1. **Toggleable LLM Condition**:
+   - This condition includes a text editor and a toggleable LLM Assistant interface, meaning that participants can close and reopen the LLM Assistant.
+   - **_Differences from other conditions_**: Compared to the Always Visible LLM condition, in which the LLM is constantly visible, here, participants can close and reopen the LLM Assistant interface.
    - **_Route Suffix_**: Add `/o` to the base link of the platform, can be adjusted in `Routes.js` file, located in the pages folder.
-   - **_Default participant-code_**: A default prefix of "TA" and a suffix of O.
-1. **Participant-Initiated AI Condition**:
-   - This condition includes a text editor and a conversational AI interface, where the conversational AI appears only if participants choose to activate it themselves, by pressing a button in the text editor's toolbar.
-   - **_Differences from other conditions_**: . Compared to the conditions above, here, participants need to press a button to activate the conversational AI actively.
+   - **_Default participant-code_**: A default prefix of "TL" and a suffix of O.
+1. **Participant-Initiated LLM Condition**:
+   - This condition includes a text editor and an LLM Assistant interface, where the LLM Assistant appears only if participants choose to activate it themselves, by pressing a button in the text editor's toolbar.
+   - **_Differences from other conditions_**: . Compared to the conditions above, here, participants need to press a button to activate the LLM Assistant actively.
    - **_Route Suffix_**: Add `/b` to the base link of the platform, can be adjusted in `Routes.js` file, located in the pages folder.
    - **_Default participant-code_**: A default prefix of "PI" and a suffix of B.
 
 1. **Chat Only Condition**:
-   - **_Purpose_**: This condition includes a conversational AI interface only. Here, participants produce their writing by interacting with the conversational AI without access to a separate text editor.
+   - **_Purpose_**: This condition includes an LLM Assistant interface only. Here, participants produce their writing by interacting with the LLM Assistant without access to a separate text editor.
    - **_Differences from other conditions_**: In this condition, participants do not have access to a text editor.
    - **_Route Suffix_**: Add `/a` to the base link of the platform, can be adjusted in `Routes.js` file, located in the pages folder.
    - **_Default participant-code_**: A default prefix of "OA" and a suffix of A.
 
-> Note: In all conditions, participants who try to submit before they meet the adjustable word count threshold and minimum time spent in the writing task (default thresholds are 50 words and 3 minutes) will receive a customizable pop-up message. Moreover, in all conditions, after participants submit their responses, they are directed to a thank-you page (`thankyou.js` file, located in `src/pages` folder) that instructs participants on how to continue the study. Finally, in all conditions that include a conversational AI window, the window includes messages displayed to participants that can be customized or deleted. These messages can be customized to instruct or encourage participants to interact with the conversational AI.
+> Note: In all conditions, participants who try to submit before they meet the adjustable word count threshold and minimum time spent in the writing task (default thresholds are 50 words and 3 minutes) will receive a customizable pop-up message. Moreover, in all conditions, after participants submit their responses, they are directed to a thank-you page (`thankyou.js` file, located in `src/pages` folder) that instructs participants on how to continue the study. Finally, in all conditions that include an LLM Assistant window, the window includes messages displayed to participants that can be customized or deleted. These messages can be customized to instruct or encourage participants to interact with the LLM Assistant.
 
 **Creating new conditions**:
 
-- **_Purpose_**: In addition to selecting the experimental conditions, several features within each of the conditions can be customized, and thus, allow the comparison of the condition and its duplicated version to compare certain features. Creating new conditions allows testing differences between several features of the same original condition, such as the option to copy and paste, LLMs powering the conversational AI, background information given to the conversational AI, etc.
+- **_Purpose_**: In addition to selecting the experimental conditions, several features within each of the conditions can be customized, and thus, allow the comparison of the condition and its duplicated version to compare certain features. Creating new conditions allows testing differences between several features of the same original condition, such as the option to copy and paste, LLMs powering the LLM Assistant, background information given to the LLM Assistant, etc.
 - **_How to duplicate_**:
   1. Create a new JavaScript file (.js file) by pressing the 'new file' button.
   2. Copy-paste the original condition's content into the new one.
@@ -315,9 +315,9 @@ Throughout the steps, please note that you are working within the same console's
     - Under Execution role, click the role name (appears in blue).
     - In the new link that opens, click **Add permissions** → **Attach policies**. Attach a policy like: `AmazonS3FullAccess` (This is how Lambda can access S3 securely without any AWS keys).
     - Return again to Configuration → General Configuration, and change timeout to 1 min (if you think your data will need more time, adjust the timeout accordinngly).
-    7.  **Add your AI API keys to Lambda (safe storage)**
+    7.  **Add your LLM API keys to Lambda (safe storage)**
         - Press Configuration → Environment variables
-        - Click edit, add, and add all the AI keys (even the empty ones) and your S3 bucket variable.
+        - Click edit, add, and add all the LLM keys (even the empty ones) and your S3 bucket variable.
     8.  **Create an API Gateway endpoint**
         - In AWS Console, search **API Gateway**
         - Click Create API → choose HTTP API → Build
@@ -378,6 +378,6 @@ The following code is written in python, in case you do not have python installe
 We provide in the `CodeAnalysisData` folder:
 
 - **_getPlainTexts.py_**: A code that receives the .txt folder path, and extracts the last version of the text (as a plain text) for usage. Please read the comments in the code, as you can also merge the texts with your data according to the codes/texts' names.
-- **_getMessageInCSV.py_**: A code that receives the .txt folder path, and extracts the messages between the conversational AI and participants (as a csv file) for usage. The csv file includes a timestamp column, a sender column, and a message content column.
+- **_getMessageInCSV.py_**: A code that receives the .txt folder path, and extracts the messages between the LLM Assistant and participants (as a csv file) for usage. The csv file includes a timestamp column, a sender column, and a message content column.
 
 That's it! Please feel free to contact me atil@campus.technion.ac.il or atilxmansour@gmail.com for any questions.
