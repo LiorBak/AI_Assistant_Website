@@ -303,7 +303,7 @@ body {
 
 /* Message bubbles */
 .user,
-.conversationalAI {
+.LLMAssistant {
   padding: 10px;
   margin-bottom: 10px;
   border-radius: 8px;
@@ -316,7 +316,7 @@ body {
   align-self: flex-end;
 }
 
-.conversationalAI {
+.LLMAssistant {
   background-color: #eee;
   color: #333;
   align-self: flex-start;

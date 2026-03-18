@@ -13,7 +13,7 @@ const AI_API = ({
   onMessagesSubmit,
   initialMessages = [],
   lastEditedText,
-  aiProvider = "chatgpt", // "chatgpt" | "claude" | "gemini"
+  LLMProvider = "chatgpt", // "chatgpt" | "claude" | "gemini"
   backgroundAIMessage = "",
 }) => {
   // Store chat messages in state (we keep everything as plain strings internally)
@@ -21,7 +21,7 @@ const AI_API = ({
     (initialMessages || []).map((text) => ({
       timestamp: Math.round(performance.now()),
       text: String(text ?? ""),
-      sender: "conversationalAI",
+      sender: "LLMAssistant",
     })),
   );
 
@@ -29,17 +29,6 @@ const AI_API = ({
   useEffect(() => {
     onMessagesSubmit(messages);
   }, [messages, onMessagesSubmit]);
-
-  // Keep old behavior: set initial messages once on mount
-  useEffect(() => {
-    setMessages(
-      (initialMessages || []).map((text) => ({
-        timestamp: Math.round(performance.now()),
-        text: String(text ?? ""),
-        sender: "conversationalAI",
-      })),
-    );
-  }, []);
 
   //toText: Converts anything into a plain string. This prevents crashes if an API returns arrays/objects instead of normal text.
   const toText = (v) => {
@@ -103,7 +92,7 @@ const AI_API = ({
     ];
 
     try {
-      let conversationalAIResponseText = "";
+      let LLMAssistantResponseText = "";
       /**
        * We do NOT call Anthropic directly from the browser (CORS + API key leak).
        * Instead, we call OUR backend proxy endpoint: /api/ai
@@ -113,7 +102,7 @@ const AI_API = ({
        */
 
       // ---- Provider 1: Claude (Anthropic) ----
-      if (aiProvider === "claude") {
+      if (LLMProvider === "claude") {
         const API_BASE =
           process.env.REACT_APP_API_BASE || "http://localhost:5050";
 
@@ -127,10 +116,10 @@ const AI_API = ({
         });
 
         // Backend returns { text: "..." }
-        conversationalAIResponseText = toText(response.data?.text).trim();
+        LLMAssistantResponseText = toText(response.data?.text).trim();
 
         // ---- Provider 2: Gemini (Google) ----
-      } else if (aiProvider === "gemini") {
+      } else if (LLMProvider === "gemini") {
         const API_BASE =
           process.env.REACT_APP_API_BASE || "http://localhost:5050";
 
@@ -144,7 +133,7 @@ const AI_API = ({
         });
 
         // Backend returns { text: "..." }
-        conversationalAIResponseText = toText(response.data?.text).trim();
+        LLMAssistantResponseText = toText(response.data?.text).trim();
 
         // ---- Provider 3: OpenAI (ChatGPT) ----
       } else {
@@ -172,16 +161,16 @@ const AI_API = ({
         });
 
         // Backend returns { text: "..." }
-        conversationalAIResponseText = toText(response.data?.text).trim();
+        LLMAssistantResponseText = toText(response.data?.text).trim();
       }
 
-      // Add conversational AI reply to the UI
+      // Add LLM Assistant reply to the UI
       setMessages((prev) => [
         ...prev,
         {
           timestamp,
-          text: toText(conversationalAIResponseText),
-          sender: "conversationalAI",
+          text: toText(LLMAssistantResponseText),
+          sender: "LLMAssistant",
         },
       ]);
     } catch (error) {
@@ -196,7 +185,7 @@ const AI_API = ({
         {
           timestamp,
           text: "Sorry, an error occurred.",
-          sender: "conversationalAI",
+          sender: "LLMAssistant",
         },
       ]);
     }

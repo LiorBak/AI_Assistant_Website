@@ -182,7 +182,7 @@ app.post("/api/ai", async (req, res) => {
     // -----------------------------
     // PROVIDER: OPENAI (ChatGPT) [DEFAULT]
     // -----------------------------
-    // Note: your React uses aiProvider="chatgpt" for OpenAI, so we treat everything else as OpenAI.
+    // LLMProvider="chatgpt" for OpenAI.
     if (!process.env.OPENAI_KEY) {
       return res
         .status(500)

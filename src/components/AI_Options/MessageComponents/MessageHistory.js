@@ -30,7 +30,7 @@ const MessageHistory = ({ messages }) => {
     <div id="chat-output">
       {/* Render each message */}
       {messages?.map((message, index) => (
-        // message.sender is used as a CSS class (e.g., "user" vs "assistant")
+        // message.sender is used as a CSS class (e.g., "user" vs "LLM")
         <div key={index} className={message?.sender}>
           {message?.text}
         </div>

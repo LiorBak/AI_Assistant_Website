@@ -1,7 +1,7 @@
 /**
- * Summary:
- * This page shows a writing editor + an Conversational AI panel, logs user activity,
- * and sends the logs to your backend endpoint (/api/logs) so the Lambda can save them to S3.
+ *Summary:
+ * the LLM Assistant opens automatically after 20 seconds (even if the participant never clicks it),
+ * so we can measure the effect of proactively offering AI help. We log chat auto-open + open/close/collapse events and upload to S3.
  *
  * sreach for: CONFIG YOU WILL EDIT to edit relevant changes
  */
@@ -13,13 +13,13 @@ import Button from "../components/Button";
 import Modal from "../components/Modal";
 import "../App.css";
 
-const AlwaysVisibleAI = () => {
+const ToggleableLLM = () => {
   // CONFIG YOU WILL EDIT:
   // Choose provider: "chatgpt" | "claude" | "gemini"
-  const aiProvider = "chatgpt";
+  const LLMProvider = "chatgpt";
 
   //CONFIG YOU WILL EDIT:
-  //Here, you can give the conversational AI background informaiton about the task,
+  //Here, you can give the LLM Assistant background informaiton about the task,
   // or instructions to reply in a certain way.
   const backgroundAIMessage = "";
 
@@ -27,27 +27,23 @@ const AlwaysVisibleAI = () => {
   // LOGGING STATE (what we save)
   // ----------------------------
   const [editorLog, setEditorLog] = useState([]); // logs from the text editor
-  const [currentLastEditedText, setCurrentLastEditedText] = useState(""); // latest editor text (used for word count + AI context)
-  const [messagesLog, setMessagesLog] = useState([]); // logs from chat messages
+  const [currentLastEditedText, setCurrentLastEditedText] = useState(""); // latest editor text (for word count + AI context)
+  const [messagesLog, setMessagesLog] = useState([]); // chat message logs
 
   // ----------------------------
   // MODALS + SUBMIT STATE
   // ----------------------------
   const [isModalOpen, setModalOpen] = useState(false); // "Are you sure?" modal
   const [isEarlyModalOpen, setEarlyModalOpen] = useState(false); // "Too early to submit" modal
-  const [submit, setSubmit] = useState(false); // passed to editor to mark submit moment (if your editor uses it)
+  const [submit, setSubmit] = useState(false); // passed into TextEditor (if editor uses it)
 
-  //pasteFlag decides if you enable or disable copying and pasting:
-  //CONFIG YOU WILL EDIT: when true, users can copy and paste to the text editor.
-  const pasteFlag = true;
-
-  // canSubmit = time requirement AND word requirement
+  // canSubmit depends on both time + word requirements
   const [canSubmit, setCanSubmit] = useState(false);
 
-  // Used to measure time spent on page for "minimum time before submit"
+  // Used to measure "minimum time before submit"
   const startTimeRef = useRef(Date.now());
 
-  // Track how many times they clicked submit + when (ms since page start)
+  // Track how many times user clicked submit + at what times (ms since page start)
   const [submitAttempts, setSubmitAttempts] = useState(0);
   const [submitAttemptTimesMs, setSubmitAttemptTimesMs] = useState([]); // [t1, t2, ...]
 
@@ -62,25 +58,54 @@ const AlwaysVisibleAI = () => {
   // CHAT UI STATE
   // ----------------------------
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isChatCollapsed, setIsChatCollapsed] = useState(false);
 
-  // CONFIG YOU WILL EDIT:
-  // Message shown if participant tries to submit too early (word/time not met)
+  // Message shown when user tries to submit too early
   const [messageEarlyModal, setMessageEarlyModal] = useState(
-    "Insert here your message, encouraging participants to write for more time + words (participants tried to submit before time + word count threshold).",
+    "Insert here your message, encouraging participants to write for more time + words (participants tried to submit before time + word count threshold)",
   );
 
-  // Chat open/close/collapse events (ms since page start)
+  // ----------------------------
+  // CHAT EVENT LOGGING
+  // We store "what happened" + "when it happened" (ms since page start).
+  // ----------------------------
   const startMsRef = useRef(performance.now());
+  const [chatEvents, setChatEvents] = useState([]);
 
-  // Prevent auto-open from firing multiple times
-  const hasAutoOpenedRef = useRef(false);
-
-  // Opens chat panel (full open)
-  const openChat = useCallback(() => {
-    setIsChatOpen(true);
+  const logChatEvent = useCallback((type, extra = {}) => {
+    const t = Math.round(performance.now() - startMsRef.current);
+    setChatEvents((prev) => [...prev, { t_ms: t, type, ...extra }]);
   }, []);
 
-  // Keep submit flag aligned with the submit modal
+  // Prevent the auto-open effect from running twice (React strict mode can double-run effects in dev)
+  const hasAutoOpenedRef = useRef(false);
+
+  //pasteFlag decides if you enable or disable copying and pasting:
+  //CONFIG YOU WILL EDIT: when true, users can copy and paste to the text editor.
+  const pasteFlag = false;
+
+  // Open chat (fully open, not collapsed)
+  const openChat = useCallback(() => {
+    setIsChatOpen(true);
+    setIsChatCollapsed(false);
+    logChatEvent("chat_open");
+  }, [logChatEvent]);
+
+  const closeChat = useCallback(() => {
+    setIsChatOpen(false);
+    setIsChatCollapsed(false);
+    logChatEvent("chat_close");
+  }, [logChatEvent]);
+
+  const toggleCollapseChat = useCallback(() => {
+    setIsChatCollapsed((v) => {
+      const next = !v;
+      logChatEvent(next ? "chat_collapse" : "chat_expand");
+      return next;
+    });
+  }, [logChatEvent]);
+
+  // Keep submit flag aligned with modal state
   useEffect(() => {
     setSubmit(isModalOpen);
   }, [isModalOpen]);
@@ -105,18 +130,17 @@ const AlwaysVisibleAI = () => {
 
   // ----------------------------
   // Time requirement (minimum time on page)
-  // CONFIG YOU WILL EDIT:
-  // Currently: 3 minutes (180000 ms)
+  // CONFIG YOU WILL EDIT: currently 3 minutes (180000 ms)
   // ----------------------------
   useEffect(() => {
     const interval = setInterval(() => {
       setCanSubmitTime(Date.now() - startTimeRef.current >= 180000);
-    }, 500); // update twice/sec
+    }, 500);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Update immediately when they return to the tab (so the timer is accurate)
+  // Update immediately when they return to the tab
   useEffect(() => {
     const onVis = () => {
       setCanSubmitTime(Date.now() - startTimeRef.current >= 180000);
@@ -127,8 +151,7 @@ const AlwaysVisibleAI = () => {
 
   // ----------------------------
   // Word requirement (minimum words typed)
-  // CONFIG YOU WILL EDIT:
-  // Currently: >= 50 words
+  // CONFIG YOU WILL EDIT: currently >= 50 words
   // ----------------------------
   useEffect(() => {
     const wc = currentLastEditedText.trim().split(/\s+/).filter(Boolean).length;
@@ -137,20 +160,24 @@ const AlwaysVisibleAI = () => {
   }, [currentLastEditedText]);
 
   // ----------------------------
-  // Auto open chat after 100 ms, so users experience it as opening immediately.
+  // PROACTIVE OFFERING: Auto-open chat after 20 seconds
+  // CONFIG YOU WILL EDIT: change 20000 ms if needed
   // ----------------------------
   useEffect(() => {
     const t = setTimeout(() => {
       if (!hasAutoOpenedRef.current) {
         hasAutoOpenedRef.current = true;
+
+        // Important: this marks that the chat was opened automatically by the condition
+        logChatEvent("chat_auto_open");
+
         openChat();
       }
-    }, 100);
+    }, 20000);
 
     return () => clearTimeout(t);
-  }, [openChat]);
+  }, [openChat, logChatEvent]);
 
-  // Combined eligibility + build the early-modal message
   useEffect(() => {
     setCanSubmit(canSubmitWord && canSubmitTime);
     //CONFIG YOU WILL EDIT:
@@ -163,19 +190,19 @@ const AlwaysVisibleAI = () => {
     } else if (!canSubmitWord) {
       //Before writing word threshold only
       setMessageEarlyModal(
-        "Insert here your message, encouraging participants to write for more words (participants tried to submit before word count threshold).",
+        "MInsert here your message, encouraging participants to write for more words (participants tried to submit before word count threshold).",
       );
     } else if (!canSubmitTime) {
       //before time threshold has passed
       setMessageEarlyModal(
-        "Insert here your message, encouraging participants to write for more time (participants tried to submit before time threshold).",
+        "Insert here your message, encouraging participants to write for more time (participants tried to submit before timet threshold).",
       );
     }
   }, [canSubmitWord, canSubmitTime]);
 
-  // When user clicks Submit button:
-  // 1) log click time
-  // 2) either open confirmation modal (if eligible) OR early modal (if not eligible)
+  // When user clicks submit:
+  // - log click time
+  // - show confirm modal if eligible, else show early modal
   const handleOpenModal = () => {
     const t_ms = Math.round(performance.now() - startMsRef.current);
 
@@ -189,26 +216,26 @@ const AlwaysVisibleAI = () => {
   const handleCloseModal = () => setModalOpen(false);
   const handleCloseEarlyModal = () => setEarlyModalOpen(false);
 
-  // Generate a random ID for each submission (.txt file name)
-  // CONFIG YOU WILL EDIT:
-  // You can change prefix/suffix to identify study condition, cohort, etc.
+  // Generate an ID for each submission (.txt name in S3)
+  // CONFIG YOU WILL EDIT: change prefix/suffix to tag condition/cohort
   function getRandomString(length) {
     const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const middlePart = Array.from(
       { length },
       () => characters[Math.floor(Math.random() * characters.length)],
     ).join("");
-    return `AVA${middlePart}U`;
+    return `TL${middlePart}O`;
   }
 
   // Called when user confirms submit
   const handleConfirmSubmit = async () => {
     setModalOpen(false);
 
-    // Build logs object that will be uploaded to S3 by your backend
+    // Everything we want to save for this condition
     const logs = {
       id: getRandomString(5),
-      aiProvider: aiProvider,
+      LLMProvider: LLMProvider,
+      chatEvents: chatEvents,
       NumOfSubmitClicks: submitAttempts,
       TimeStampOfSubmitClicks: submitAttemptTimesMs,
       messages: messagesLog,
@@ -217,22 +244,18 @@ const AlwaysVisibleAI = () => {
     saveLogsToS3(logs);
   };
 
-  // Called by TextEditor component to provide the full editor log array
+  // Receive editor logs
   const handleEditorLog = useCallback((allLogs) => {
     setEditorLog(allLogs);
   }, []);
 
-  // Called by AI_API component to provide the full messages log array
+  // Receive chat message logs
   const handleMessages = useCallback((allMessages) => {
     setMessagesLog(allMessages);
   }, []);
 
-  // ----------------------------
-  // Upload logs to backend (/api/logs)
-  // CONFIG YOU WILL EDIT:
-  // 1) REACT_APP_API_BASE in your .env (frontend)
-  // 2) Lambda route must handle POST /api/logs and write to S3
-  // ----------------------------
+  // Upload logs to backend (/api/logs) which writes to S3
+  // CONFIG YOU WILL EDIT: REACT_APP_API_BASE must exist in frontend .env
   const saveLogsToS3 = async (logs) => {
     const API_BASE = process.env.REACT_APP_API_BASE;
 
@@ -244,20 +267,19 @@ const AlwaysVisibleAI = () => {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data?.error || "Save failed");
-
     // CONFIG YOU WILL EDIT:
     // This is the message shown to participants after upload succeeds.
     alert("Please copy this code to XXX: " + logs.id);
   };
 
-  // CSS helper class for chat open/closed styling
-  const assistantSlotClass = `${isChatOpen ? "open" : ""}`.trim();
+  // CSS helper class for chat open/collapsed styling
+  const assistantSlotClass = `${isChatOpen ? "open" : ""} ${
+    isChatCollapsed ? "collapsed" : ""
+  }`.trim();
 
   return (
     <div>
-      {/* CONFIG YOU WILL EDIT:
-          Put your study instructions here (can include <strong>bold</strong> text).
-      */}
+      {/* CONFIG YOU WILL EDIT: put your participant instructions here */}
       <p id="instructions" style={{ display: "block" }}>
         Instructions: You can write here your instructions.{" "}
         <strong>The important instructions can be in bold .</strong> While less
@@ -269,9 +291,11 @@ const AlwaysVisibleAI = () => {
 
         <div
           id="title-assistant"
-          className={`title-fade-in ${isChatOpen ? "show" : ""}`}
+          className={`title-fade-in ${
+            isChatOpen && !isChatCollapsed ? "show" : ""
+          }`}
         >
-          Conversational AI
+          LLM Assistant
         </div>
       </div>
 
@@ -281,32 +305,51 @@ const AlwaysVisibleAI = () => {
             <TextEditor
               submit={submit}
               onEditorSubmit={handleEditorLog}
-              pasteFlag={pasteFlag}
+              pasteFlag={pasteFlag} //users can copy and paste.
               onLastEditedTextChange={setCurrentLastEditedText}
-              showAI={false}
+              showAI={false} // condition-specific: AI is not a button; it's auto-opened instead
             />
           </div>
         </div>
 
-        {/* RIGHT: Chat slot */}
+        {/* RIGHT: Chat slot (open + collapsible handle) */}
         <div id="assistant-slot" className={assistantSlotClass}>
-          {isChatOpen}
+          {/* Collapse handle only shows after chat is opened */}
+          {isChatOpen && (
+            <button
+              className="chat-handle"
+              onClick={toggleCollapseChat}
+              aria-label={isChatCollapsed ? "Show chat" : "Hide chat"}
+              title={isChatCollapsed ? "Show chat" : "Hide chat"}
+              type="button"
+            >
+              {isChatCollapsed ? "❮" : "❯"}
+            </button>
+          )}
 
           <div className="assistant-inner">
             <div className="chat-shell-header">
-              <div>Conversational AI</div>
+              <div>LLM Assistant</div>
+
+              <button
+                className="chat-close"
+                onClick={closeChat}
+                aria-label="Close chat"
+                type="button"
+              >
+                ✕
+              </button>
             </div>
 
             <AI_API
               onMessagesSubmit={handleMessages}
-              // CONFIG YOU WILL EDIT:
-              // Initial messages shown in the chat.
+              // CONFIG YOU WILL EDIT: present chat messages
               initialMessages={[
-                "Hello, this is a present message that you can edit in your code in AlwaysVisibleAI.js (initialMessages).",
+                "Hello, this is a present message that you can edit in your code in ToggleableLLM.js (initialMessages).",
                 "This is the second message, you can edit, add more, or delete me.",
               ]}
               lastEditedText={currentLastEditedText}
-              aiProvider={aiProvider}
+              LLMProvider={LLMProvider}
               backgroundAIMessage={backgroundAIMessage}
             />
           </div>
@@ -328,7 +371,7 @@ const AlwaysVisibleAI = () => {
         showConfirm={true}
       />
 
-      {/* Early-submit modal (word/time requirement not met) */}
+      {/* Early submit modal: word/time requirement not met */}
       <Modal
         isOpen={isEarlyModalOpen}
         onClose={handleCloseEarlyModal}
@@ -339,4 +382,4 @@ const AlwaysVisibleAI = () => {
   );
 };
 
-export default AlwaysVisibleAI;
+export default ToggleableLLM;

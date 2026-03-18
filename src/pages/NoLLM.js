@@ -1,6 +1,6 @@
 /**
  * OnlyEditor.js
- * Condition: OnlyEditor — editor-only baseline (no Conversational AI). Participants must write at least 80 words to submit,
+ * Condition: OnlyEditor — editor-only baseline (no LLM Assistant). Participants must write at least 80 words to submit,
  * On submit, we upload ONLY editor logs to S3.
  *
  * CONFIG YOU WILL EDIT:
@@ -14,7 +14,7 @@ import TextEditor from "../components/QuillTextEditor";
 import Button from "../components/Button";
 import Modal from "../components/Modal";
 
-const NoAI = () => {
+const NoLLM = () => {
   // ----------------------------
   // LOGGING STATE
   // ----------------------------
@@ -160,7 +160,7 @@ const NoAI = () => {
       { length },
       () => characters[Math.floor(Math.random() * characters.length)],
     ).join("");
-    return `OE${middlePart}C`;
+    return `OL${middlePart}C`;
   }
 
   // Called when user confirms submit
@@ -258,4 +258,4 @@ const NoAI = () => {
   );
 };
 
-export default NoAI;
+export default NoLLM;

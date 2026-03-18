@@ -1,6 +1,6 @@
 /**
  * Summary:
- * This page shows a writing editor + an Conversational AI. The AI starts CLOSED and opens only
+ * This page shows a writing editor + an LLM Assistant. The AI starts CLOSED and opens only
  * when the participant clicks the AI button (from the editor toolbar). We log:
  * - editor activity
  * - chat messages
@@ -22,10 +22,10 @@ import "../App.css";
 const ParticipantInitiated = () => {
   // CONFIG YOU WILL EDIT:
   // Choose provider: "chatgpt" | "claude" | "gemini"
-  const aiProvider = "chatgpt";
+  const LLMProvider = "chatgpt";
 
   //CONFIG YOU WILL EDIT:
-  //Here, you can give the conversational AI background informaiton about the task,
+  //Here, you can give the LLM Assistant background informaiton about the task,
   // or instructions to reply in a certain way.
   const backgroundAIMessage = "";
 
@@ -239,7 +239,7 @@ const ParticipantInitiated = () => {
     // Build logs to upload to S3
     const logs = {
       id: getRandomString(5),
-      aiProvider: aiProvider,
+      LLMProvider: LLMProvider,
 
       // Chat interaction summary
       chatEvents: chatEvents, // open/close/collapse events (timestamped)
@@ -319,7 +319,7 @@ const ParticipantInitiated = () => {
             isChatOpen && !isChatCollapsed ? "show" : ""
           }`}
         >
-          Conversational AI
+          LLM Assistant
         </div>
       </div>
 
@@ -355,7 +355,7 @@ const ParticipantInitiated = () => {
 
           <div className="assistant-inner">
             <div className="chat-shell-header">
-              <div>Conversational AI</div>
+              <div>LLM Assistant</div>
 
               <button
                 className="chat-close"
@@ -376,7 +376,7 @@ const ParticipantInitiated = () => {
                 "This is the second message, you can edit, add more, or delete me.",
               ]}
               lastEditedText={currentLastEditedText}
-              aiProvider={aiProvider}
+              LLMProvider={LLMProvider}
               backgroundAIMessage={backgroundAIMessage}
             />
           </div>
