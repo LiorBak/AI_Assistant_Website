@@ -1,32 +1,78 @@
+
 from __future__ import annotations
 
 import csv
 import json
 import re
+import statistics
 from difflib import SequenceMatcher
 from html import unescape
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # ------------------------------------------------------------
-# Behavior after LLM consultation analysis
+# Behavior After Consultation
 # ------------------------------------------------------------
-# Folder structure assumed:
+# This script assumes the following folder structure:
 #
 # code_website/
 #   CodeAnalysisData/
-#       revisionAfterConsultation_clean.py   <-- place this file here
+#       behaviorPostConsultation.py   <-- this file
 #   exampleDataFiles/
 #       participant1.txt
 #       participant2.txt
 #       ...
 #
-# Outputs:
-#   1. revision_after_consultation_summary.csv
-#   2. revision_after_consultation_events.csv
+# This file writes two CSV files to this folder:
+#    CodeAnalysisData/revision_after_consultation_summary.csv
+#    CodeAnalysisData/revision_after_consultation_events.csv
 #
-# The script is robust to missing "messages", "chatEvents", or "editor".
-# If a field is missing, it records empty / None-based results rather than crashing.
+# Main goal:
+# - analyze how participants' writing changes before and after each
+#   consultation episode with the LLM assistant
+#
+# Main outputs:
+# - participant-level summary metrics:
+#    * number_of_consultation_episodes
+#    * mean_words_written_in_pre_window
+#    * mean_words_written_in_post_window
+#    * mean_words_deleted_in_pre_window
+#    * mean_words_deleted_in_post_window
+#    * mean_words_edited_in_pre_window
+#    * mean_words_edited_in_post_window
+#    * mean_net_word_change_in_pre_window
+#    * mean_net_word_change_in_post_window
+#    * mean_burst_count_in_pre_window
+#    * mean_burst_count_in_post_window
+#    * mean_burst_words_added_in_pre_window
+#    * mean_burst_words_added_in_post_window
+#
+# - event-level consultation metrics:
+#    * consultation_start_ms
+#    * consultation_end_ms
+#    * consultation_duration_sec
+#    * words_written_in_pre_window
+#    * words_written_in_post_window
+#    * words_deleted_in_pre_window
+#    * words_deleted_in_post_window
+#    * words_edited_in_pre_window
+#    * words_edited_in_post_window
+#    * net_word_change_in_pre_window
+#    * net_word_change_in_post_window
+#    * burst_count_in_pre_window
+#    * burst_count_in_post_window
+#    * mean_burst_duration_sec_in_pre_window
+#    * mean_burst_duration_sec_in_post_window
+#    * mean_burst_words_added_in_pre_window
+#    * mean_burst_words_added_in_post_window
+#
+# Definitions used here:
+# - Pre window = the fixed time window before a consultation episode.
+# - Post window = the fixed time window after a consultation episode.
+# - Written / deleted / edited words are estimated by comparing the text
+#   at the start and end of each window.
+# - Burst = a sequence of nearby editor snapshots separated by less than
+#   BURST_PAUSE_THRESHOLD_MS.
 # ------------------------------------------------------------
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -39,18 +85,45 @@ EVENT_OUTPUT_CSV = SCRIPT_DIR / "revision_after_consultation_events.csv"
 USER_SENDER_VALUES = {"user"}
 ASSISTANT_SENDER_VALUES = {"llmassistant", "assistant", "ai", "model"}
 
-# CONFIG YOU WILL EDIT:
-# Burst-analysis window length in milliseconds.
-# Example: 30000 = 30 seconds, 60000 = 60 seconds.
+# CONFIG YOU WILL EDIT
+INCLUDE_INITIAL_ASSISTANT_MESSAGES = False
+
+# CONFIG YOU WILL EDIT
+PRESENT_MESSAGE_PHRASES_TO_IGNORE = [
+    "present message",
+    "this is the second message",
+]
+
+# CONFIG YOU WILL EDIT
+NON_SUBSTANTIVE_USER_PATTERNS = [
+    r"^\s*(thanks|thank you|thx|ok|okay|great|cool|nice|awesome|got it|perfect|sounds good)[!. ]*\s*$",
+    r"^\s*(thanks|thank you).{0,20}\s*$",
+]
+
+# CONFIG YOU WILL EDIT
+MIN_SUBSTANTIVE_USER_CHARS = 8
+
+# CONFIG YOU WILL EDIT
+EPISODE_GAP_MS = 60000
+MIN_EDITOR_SNAPSHOTS_BETWEEN_EPISODES = 3
+MIN_WORD_CHANGE_BETWEEN_EPISODES = 5
+
+# CONFIG YOU WILL EDIT
 PRE_WINDOW_MS = 30000
 POST_WINDOW_MS = 30000
+
+# CONFIG YOU WILL EDIT
+BURST_PAUSE_THRESHOLD_MS = 2000
 
 
 def strip_html(html_text: str) -> str:
     if not html_text:
         return ""
-    text = re.sub(r"<[^>]+>", " ", html_text)
+    text = re.sub(r"<br\s*/?>", " ", html_text, flags=re.IGNORECASE)
+    text = re.sub(r"</p\s*>", "\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
     text = unescape(text)
+    text = text.replace("\xa0", " ")
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
@@ -58,7 +131,7 @@ def strip_html(html_text: str) -> str:
 def count_words(text: str) -> int:
     if not text:
         return 0
-    return len(re.findall(r"\b\w+\b", text))
+    return len(re.findall(r"\b\w+\b", text.lower()))
 
 
 def safe_load_json(path: Path) -> Optional[Dict[str, Any]]:
@@ -108,7 +181,7 @@ def get_messages(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         if isinstance(timestamp, (int, float)) and isinstance(sender, str):
             cleaned.append({
                 "timestamp": int(timestamp),
-                "sender": sender,
+                "sender": sender.strip().lower(),
                 "text": str(text),
             })
 
@@ -116,54 +189,44 @@ def get_messages(data: Dict[str, Any]) -> List[Dict[str, Any]]:
     return cleaned
 
 
-def normalize_sender(sender: str) -> str:
-    return sender.strip().lower()
+def get_first_user_timestamp(messages: List[Dict[str, Any]]) -> Optional[int]:
+    for msg in messages:
+        if msg["sender"] in USER_SENDER_VALUES:
+            return msg["timestamp"]
+    return None
 
 
-def get_consultation_episodes(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    episodes: List[Dict[str, Any]] = []
+def is_present_message_by_content(text: str) -> bool:
+    text_lower = text.lower()
+    return any(phrase.lower() in text_lower for phrase in PRESENT_MESSAGE_PHRASES_TO_IGNORE)
 
-    i = 0
-    while i < len(messages):
-        msg = messages[i]
-        sender = normalize_sender(msg["sender"])
 
-        if sender not in USER_SENDER_VALUES:
-            i += 1
-            continue
+def filter_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    first_user_timestamp = get_first_user_timestamp(messages)
+    filtered: List[Dict[str, Any]] = []
 
-        episode = {
-            "user_message_time": msg["timestamp"],
-            "user_message_text": msg["text"],
-            "assistant_response_time": None,
-            "assistant_response_text": None,
-            "consultation_end_time": msg["timestamp"],
-        }
+    for msg in messages:
+        if msg["sender"] in ASSISTANT_SENDER_VALUES:
+            if not INCLUDE_INITIAL_ASSISTANT_MESSAGES and first_user_timestamp is not None:
+                if msg["timestamp"] < first_user_timestamp:
+                    continue
+            if is_present_message_by_content(msg["text"]):
+                continue
+        filtered.append(msg)
 
-        j = i + 1
-        while j < len(messages):
-            next_msg = messages[j]
-            next_sender = normalize_sender(next_msg["sender"])
+    return filtered
 
-            if next_sender in ASSISTANT_SENDER_VALUES:
-                episode["assistant_response_time"] = next_msg["timestamp"]
-                episode["assistant_response_text"] = next_msg["text"]
-                episode["consultation_end_time"] = next_msg["timestamp"]
-                break
 
-            if next_sender in USER_SENDER_VALUES:
-                break
-
-            j += 1
-
-        episodes.append(episode)
-        i += 1
-
-    return episodes
+def is_substantive_user_message(text: str) -> bool:
+    plain = strip_html(text).lower().strip()
+    if len(plain) < MIN_SUBSTANTIVE_USER_CHARS:
+        return False
+    return not any(re.match(pattern, plain) for pattern in NON_SUBSTANTIVE_USER_PATTERNS)
 
 
 def get_latest_snapshot_at_or_before(
-    target_ms: int, snapshots: List[Dict[str, Any]]
+    target_ms: int,
+    snapshots: List[Dict[str, Any]],
 ) -> Optional[Dict[str, Any]]:
     latest = None
     for snap in snapshots:
@@ -179,22 +242,110 @@ def get_text_at_or_before(target_ms: int, snapshots: List[Dict[str, Any]]) -> st
     return snap["text"] if snap else ""
 
 
-def get_session_end_ms(
-    data: Dict[str, Any],
-    snapshots: List[Dict[str, Any]],
+def editor_activity_between(
+    start_ms: int,
+    end_ms: int,
+    editor: List[Dict[str, Any]],
+) -> Dict[str, int]:
+    window_snaps = [s for s in editor if start_ms < s["t_ms"] <= end_ms]
+    before_snap = get_latest_snapshot_at_or_before(start_ms, editor)
+
+    start_word_count = before_snap["word_count"] if before_snap else 0
+    end_word_count = window_snaps[-1]["word_count"] if window_snaps else start_word_count
+
+    return {
+        "n_snapshots": len(window_snaps),
+        "net_word_change": end_word_count - start_word_count,
+    }
+
+
+def should_start_new_episode(
+    next_user_ts: int,
+    current_last_message_ts: Optional[int],
+    editor: List[Dict[str, Any]],
+    current_has_assistant: bool,
+) -> bool:
+    if current_last_message_ts is None:
+        return False
+
+    gap_ms = next_user_ts - current_last_message_ts
+    if gap_ms >= EPISODE_GAP_MS:
+        return True
+
+    if current_has_assistant:
+        activity = editor_activity_between(
+            start_ms=current_last_message_ts,
+            end_ms=next_user_ts,
+            editor=editor,
+        )
+        if activity["n_snapshots"] >= MIN_EDITOR_SNAPSHOTS_BETWEEN_EPISODES:
+            return True
+        if abs(activity["net_word_change"]) >= MIN_WORD_CHANGE_BETWEEN_EPISODES:
+            return True
+
+    return False
+
+
+def build_consultation_episodes(
     messages: List[Dict[str, Any]],
-) -> Optional[int]:
-    timestamps: List[int] = []
-    timestamps.extend([s["t_ms"] for s in snapshots])
-    timestamps.extend([m["timestamp"] for m in messages])
+    editor: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    filtered_messages = filter_messages(messages)
+    episodes: List[Dict[str, Any]] = []
+    current: Optional[Dict[str, Any]] = None
 
-    submit_clicks = data.get("TimeStampOfSubmitClicks", [])
-    if isinstance(submit_clicks, list):
-        for ts in submit_clicks:
-            if isinstance(ts, (int, float)):
-                timestamps.append(int(ts))
+    for msg in filtered_messages:
+        sender = msg["sender"]
+        timestamp = msg["timestamp"]
+        text = msg["text"]
 
-    return max(timestamps) if timestamps else None
+        is_user = sender in USER_SENDER_VALUES
+        is_assistant = sender in ASSISTANT_SENDER_VALUES
+
+        if not (is_user or is_assistant):
+            continue
+
+        if current is not None and is_user:
+            if should_start_new_episode(
+                next_user_ts=timestamp,
+                current_last_message_ts=current["last_message_ts"],
+                editor=editor,
+                current_has_assistant=current["n_assistant_messages"] > 0,
+            ):
+                episodes.append(current)
+                current = None
+
+        if is_user and not is_substantive_user_message(text):
+            continue
+
+        if current is None:
+            if is_user:
+                current = {
+                    "episode_start_ms": timestamp,
+                    "episode_end_ms": timestamp,
+                    "first_user_message_ms": timestamp,
+                    "last_message_ts": timestamp,
+                    "n_user_messages": 1,
+                    "n_assistant_messages": 0,
+                    "user_messages": [text],
+                    "assistant_messages": [],
+                }
+            continue
+
+        if is_user:
+            current["n_user_messages"] += 1
+            current["user_messages"].append(text)
+        elif is_assistant and current["n_user_messages"] > 0:
+            current["n_assistant_messages"] += 1
+            current["assistant_messages"].append(text)
+
+        current["last_message_ts"] = timestamp
+        current["episode_end_ms"] = max(current["episode_end_ms"], timestamp)
+
+    if current is not None:
+        episodes.append(current)
+
+    return episodes
 
 
 def compare_texts_word_level(text_before: str, text_after: str) -> Dict[str, Any]:
@@ -267,7 +418,66 @@ def compare_window_texts(
     return result
 
 
-def mean_or_none(values: List[int]) -> Optional[float]:
+def split_into_bursts(series: List[Dict[str, Any]]) -> List[List[Dict[str, Any]]]:
+    if not series:
+        return []
+
+    bursts: List[List[Dict[str, Any]]] = [[series[0]]]
+
+    for i in range(1, len(series)):
+        gap = series[i]["t_ms"] - series[i - 1]["t_ms"]
+        if gap >= BURST_PAUSE_THRESHOLD_MS:
+            bursts.append([series[i]])
+        else:
+            bursts[-1].append(series[i])
+
+    return bursts
+
+
+def words_added_within_burst(burst: List[Dict[str, Any]]) -> int:
+    if len(burst) < 2:
+        return 0
+
+    total_added = 0
+    for i in range(1, len(burst)):
+        delta = burst[i]["word_count"] - burst[i - 1]["word_count"]
+        if delta > 0:
+            total_added += delta
+    return total_added
+
+
+def compute_burst_metrics_for_window(
+    snapshots: List[Dict[str, Any]],
+    start_ms: int,
+    end_ms: int,
+) -> Dict[str, Any]:
+    window_snaps = [s for s in snapshots if start_ms <= s["t_ms"] <= end_ms]
+    bursts = split_into_bursts(window_snaps)
+
+    if not bursts:
+        return {
+            "burst_count": 0,
+            "mean_burst_duration_sec": None,
+            "mean_burst_words_added": None,
+            "max_burst_words_added": None,
+        }
+
+    burst_durations_ms: List[int] = []
+    burst_words_added: List[int] = []
+
+    for burst in bursts:
+        burst_durations_ms.append(burst[-1]["t_ms"] - burst[0]["t_ms"])
+        burst_words_added.append(words_added_within_burst(burst))
+
+    return {
+        "burst_count": len(bursts),
+        "mean_burst_duration_sec": round(statistics.mean(burst_durations_ms) / 1000, 4),
+        "mean_burst_words_added": round(statistics.mean(burst_words_added), 4),
+        "max_burst_words_added": max(burst_words_added),
+    }
+
+
+def mean_or_none(values: List[float]) -> Optional[float]:
     if not values:
         return None
     return round(sum(values) / len(values), 4)
@@ -296,8 +506,7 @@ def analyze_file(path: Path) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     snapshots = get_editor_snapshots(data)
     messages = get_messages(data)
     participant_id = str(data.get("id", path.stem))
-    session_end_ms = get_session_end_ms(data, snapshots, messages)
-    episodes = get_consultation_episodes(messages)
+    episodes = build_consultation_episodes(messages, snapshots)
 
     event_rows: List[Dict[str, Any]] = []
 
@@ -309,20 +518,35 @@ def analyze_file(path: Path) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
     post_edited_counts: List[int] = []
     pre_net_changes: List[int] = []
     post_net_changes: List[int] = []
+    pre_burst_counts: List[int] = []
+    post_burst_counts: List[int] = []
+    pre_burst_words: List[float] = []
+    post_burst_words: List[float] = []
 
-    for idx, ep in enumerate(episodes, start=1):
-        user_time = ep["user_message_time"]
-        consultation_end_time = ep["consultation_end_time"]
+    for idx, episode in enumerate(episodes, start=1):
+        consultation_start_ms = episode["episode_start_ms"]
+        consultation_end_ms = episode["episode_end_ms"]
 
         pre_window = compare_window_texts(
             snapshots=snapshots,
-            start_ms=max(0, user_time - PRE_WINDOW_MS),
-            end_ms=user_time,
+            start_ms=max(0, consultation_start_ms - PRE_WINDOW_MS),
+            end_ms=consultation_start_ms,
         )
         post_window = compare_window_texts(
             snapshots=snapshots,
-            start_ms=consultation_end_time,
-            end_ms=consultation_end_time + POST_WINDOW_MS,
+            start_ms=consultation_end_ms,
+            end_ms=consultation_end_ms + POST_WINDOW_MS,
+        )
+
+        pre_burst_metrics = compute_burst_metrics_for_window(
+            snapshots=snapshots,
+            start_ms=max(0, consultation_start_ms - PRE_WINDOW_MS),
+            end_ms=consultation_start_ms,
+        )
+        post_burst_metrics = compute_burst_metrics_for_window(
+            snapshots=snapshots,
+            start_ms=consultation_end_ms,
+            end_ms=consultation_end_ms + POST_WINDOW_MS,
         )
 
         pre_added = None if pre_window is None else pre_window["added_word_count"]
@@ -354,22 +578,25 @@ def analyze_file(path: Path) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
         if post_net is not None:
             post_net_changes.append(post_net)
 
-        relative_position = (
-            round(user_time / session_end_ms, 4)
-            if isinstance(session_end_ms, int) and session_end_ms > 0
-            else None
-        )
+        pre_burst_counts.append(pre_burst_metrics["burst_count"])
+        post_burst_counts.append(post_burst_metrics["burst_count"])
+
+        if pre_burst_metrics["mean_burst_words_added"] is not None:
+            pre_burst_words.append(pre_burst_metrics["mean_burst_words_added"])
+        if post_burst_metrics["mean_burst_words_added"] is not None:
+            post_burst_words.append(post_burst_metrics["mean_burst_words_added"])
 
         event_rows.append({
             "participant_id": participant_id,
             "source_file": path.name,
             "consultation_number": idx,
-            "user_message_time_ms": user_time,
-            "assistant_response_time_ms": ep["assistant_response_time"],
-            "consultation_end_time_ms": consultation_end_time,
-            "relative_task_position": relative_position,
-            "user_message_text": ep["user_message_text"],
-            "assistant_response_text": ep["assistant_response_text"],
+            "consultation_start_ms": consultation_start_ms,
+            "consultation_end_ms": consultation_end_ms,
+            "consultation_duration_sec": round((consultation_end_ms - consultation_start_ms) / 1000, 3),
+            "n_user_messages_in_episode": episode["n_user_messages"],
+            "n_assistant_messages_in_episode": episode["n_assistant_messages"],
+            "user_messages_joined": " || ".join(episode["user_messages"]),
+            "assistant_messages_joined": " || ".join(episode["assistant_messages"]),
 
             "words_written_in_pre_window": pre_added,
             "words_written_in_post_window": post_added,
@@ -390,16 +617,24 @@ def analyze_file(path: Path) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
             "text_edited_from_in_post_window": None if post_window is None else post_window["edited_from_text"],
             "text_edited_to_in_post_window": None if post_window is None else post_window["edited_to_text"],
 
+            "burst_count_in_pre_window": pre_burst_metrics["burst_count"],
+            "burst_count_in_post_window": post_burst_metrics["burst_count"],
+            "mean_burst_duration_sec_in_pre_window": pre_burst_metrics["mean_burst_duration_sec"],
+            "mean_burst_duration_sec_in_post_window": post_burst_metrics["mean_burst_duration_sec"],
+            "mean_burst_words_added_in_pre_window": pre_burst_metrics["mean_burst_words_added"],
+            "mean_burst_words_added_in_post_window": post_burst_metrics["mean_burst_words_added"],
+            "max_burst_words_added_in_pre_window": pre_burst_metrics["max_burst_words_added"],
+            "max_burst_words_added_in_post_window": post_burst_metrics["max_burst_words_added"],
+
             "pre_window_ms": PRE_WINDOW_MS,
             "post_window_ms": POST_WINDOW_MS,
+            "burst_pause_threshold_ms": BURST_PAUSE_THRESHOLD_MS,
         })
-
-    n_consultations = len(event_rows)
 
     summary_row = {
         "participant_id": participant_id,
         "source_file": path.name,
-        "number_of_consultations": n_consultations,
+        "number_of_consultation_episodes": len(episodes),
 
         "mean_words_written_in_pre_window": mean_or_none(pre_added_counts),
         "mean_words_written_in_post_window": mean_or_none(post_added_counts),
@@ -409,6 +644,11 @@ def analyze_file(path: Path) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
         "mean_words_edited_in_post_window": mean_or_none(post_edited_counts),
         "mean_net_word_change_in_pre_window": mean_or_none(pre_net_changes),
         "mean_net_word_change_in_post_window": mean_or_none(post_net_changes),
+
+        "mean_burst_count_in_pre_window": mean_or_none(pre_burst_counts),
+        "mean_burst_count_in_post_window": mean_or_none(post_burst_counts),
+        "mean_burst_words_added_in_pre_window": mean_or_none(pre_burst_words),
+        "mean_burst_words_added_in_post_window": mean_or_none(post_burst_words),
 
         "has_messages_field": "messages" in data,
         "has_editor_field": "editor" in data,

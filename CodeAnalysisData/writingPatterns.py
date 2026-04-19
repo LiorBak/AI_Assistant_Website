@@ -19,7 +19,7 @@
 # - writing pace:
 #    * final_word_count
 #    * total_words_added
-#    * net_words_added
+#    * net_words_added (actual words not including deletion)
 #    * words_added_per_minute
 #    * net_words_per_minute
 # - pauses:
